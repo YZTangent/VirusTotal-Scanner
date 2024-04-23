@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Upload and Table</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #333; /* Too dark? hmmm */
+            color: #999;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .form-group input[type="file"] {
+            display: block;
+            font: inherit;
+        }
+        
+        .form-group input[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            font: inherit;
+            padding: 10px 20px;
+            border: none; /* why is the default border kinda goofy */
+            cursor: pointer;
+            border-radius: 5px; 
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px; /* Added some space between form and table */
+        }
+        
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Malware Scanner</h1>
+        <form>
+            <label for="file">Upload a file to scan:</label>
+            <div class="form-group">
+                
+                <input type="file" id="file" name="file">
+            
+                <input type="submit" value="Upload">
+            </div>
+        </form>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>File</th>
+                    <th>Report</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Analysis }}
+                <tr>
+                    <td>{{ .Name}} </td>
+                    <td>{{ .Name}} Report</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+</body>
