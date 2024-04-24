@@ -1,12 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"website/scanner"
+	"fmt"
 )
 
 type Analysis struct {
@@ -52,6 +52,7 @@ var apiKey string
 func initPage() {
 	apiKey = os.Getenv("VIRUSTOTAL_API_KEY")
 
+	fmt.Println("API Key: ", apiKey)
 	tmpl = template.Must(template.ParseFiles("index.html"))
 }
 
@@ -66,12 +67,14 @@ func scanFileHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error parsing form: ", err)
 		http.Error(w, "Error parsing submission", http.StatusInternalServerError)
+		return 
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		log.Println("Error retrieving file from form: ", err)
 		http.Error(w, "Error retrieving file from form: ", http.StatusInternalServerError)
+		return 
 	}
 	defer file.Close()
 	log.Println("File received successfully: ", header.Filename)
@@ -80,24 +83,30 @@ func scanFileHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error sending file to scan: ", err)
 		http.Error(w, "Error sending file to scan", http.StatusInternalServerError)
+		return 
 	}
 	log.Println("File sent to scan successfully: ", id)
+
+	log.Println(id)
 
 	report, err := scanner.GetReport(id, apiKey)
 	if err != nil {
 		log.Println("Error retrieving report: ", err)
 		http.Error(w, "Error retrieving report", http.StatusInternalServerError)
+		return 
 	}
 	log.Println("Report retrieved successfully")
 
-	var parsedReport Report
-	parsedReport.Name = header.Filename
-	err = json.Unmarshal(report, &parsedReport)
-	if err != nil {
-		log.Println("Error parsing report: ", err)
-		http.Error(w, "Error parsing report", http.StatusInternalServerError)
-	}
-	log.Println("Report parsed successfully")
+	log.Println(report)
+	// var parsedReport Report
+	// parsedReport.Name = header.Filename
+	// err = json.Unmarshal(report, &parsedReport)
+	// if err != nil {
+	// 	log.Println("Error parsing report: ", err)
+	// 	http.Error(w, "Error parsing report", http.StatusInternalServerError)
+	// 	return 
+	// }
+	// log.Println("Report parsed successfully")
 }
 
 func main() {

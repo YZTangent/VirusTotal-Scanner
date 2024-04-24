@@ -15,7 +15,7 @@ func SendFileToScan(file multipart.File, header *multipart.FileHeader, apiKey st
 	bodyWriter := multipart.NewWriter(body)
 
 	// add a form file to the body
-	fileWriter, err := bodyWriter.CreateFormFile("fileUpload", header.Filename)
+	fileWriter, err := bodyWriter.CreateFormFile("file", header.Filename)
 	if err != nil {
 		return "", err
 	}
@@ -47,15 +47,7 @@ func SendFileToScan(file multipart.File, header *multipart.FileHeader, apiKey st
 		return "", fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
 	}
 
-	// Read response body
-	responseBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	// Parse JSON response
-	var response map[string]interface{}
-	err = json.Unmarshal(responseBody, &response)
+	response, err := parseResponse(resp)
 	if err != nil {
 		return "", err
 	}
@@ -69,6 +61,52 @@ func SendFileToScan(file multipart.File, header *multipart.FileHeader, apiKey st
 	return id, nil
 }
 
-func GetReport(id, apiKey string) ([]byte, error) {
-	return nil, nil
+func GetReport(id, apiKey string) (interface{}, error) {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://www.virustotal.com/api/v3/analyses/%s", id), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("x-apikey", apiKey)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	// Check response status code
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
+	}
+
+	response, err := parseResponse(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract the id field
+	data, ok := response["data"]
+	if !ok {
+		return nil, fmt.Errorf("unable to extract id from response")
+	}
+
+	return data, nil 
+}
+
+func parseResponse(resp *http.Response) (map[string]interface{}, error) {
+	// Read response body
+	responseBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse JSON response
+	var response map[string]interface{}
+	err = json.Unmarshal(responseBody, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
