@@ -1,63 +1,44 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"website/db"
 	"website/scanner"
-	"fmt"
+
+	_ "github.com/lib/pq"
 )
-
-type Analysis struct {
-	Name string
-	Key  string
-}
-
-type Report struct {
-	Name string
-	Data struct {
-		Id    string
-		Links struct {
-			Self string
-			Item string
-		}
-	}
-	Attributes struct {
-		Date  string
-		Stats struct {
-			Malicious        int
-			Suspicious       int
-			Undetected       int
-			Harmless         int
-			Timeout          int
-			ConfirmedTimeout int
-			Failure          int
-			TypeUnsupported  int
-		}
-	}
-	Meta struct {
-		FileInfo struct {
-			sha256 string
-			md5    string
-			sha1   string
-			size   int
-		}
-	}
-}
 
 var tmpl *template.Template
 var apiKey string
+var dbCon *sql.DB
 
 func initPage() {
 	apiKey = os.Getenv("VIRUSTOTAL_API_KEY")
+	dbUrl := os.Getenv("DB_URL")
+
+	var err error
+	dbCon, err = sql.Open("postgres", dbUrl)
+	if err != nil {
+		log.Fatal("Error connecting to database: ", err)
+	}
 
 	fmt.Println("API Key: ", apiKey)
 	tmpl = template.Must(template.ParseFiles("index.html"))
 }
 
 func loadPageHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl.Execute(w, map[string][]Analysis{"Analysis": {{Name: "Analysis 1"}, {Name: "Analysis 2"}}})
+	reports, err := db.GetReports(dbCon)
+	if err != nil {
+		log.Println("Error retrieving reports: ", err)
+		http.Error(w, "Error retrieving reports", http.StatusInternalServerError)
+	}
+
+	tmpl.Execute(w, reports)
 }
 
 func scanFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -67,14 +48,14 @@ func scanFileHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error parsing form: ", err)
 		http.Error(w, "Error parsing submission", http.StatusInternalServerError)
-		return 
+		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		log.Println("Error retrieving file from form: ", err)
 		http.Error(w, "Error retrieving file from form: ", http.StatusInternalServerError)
-		return 
+		return
 	}
 	defer file.Close()
 	log.Println("File received successfully: ", header.Filename)
@@ -83,7 +64,7 @@ func scanFileHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error sending file to scan: ", err)
 		http.Error(w, "Error sending file to scan", http.StatusInternalServerError)
-		return 
+		return
 	}
 	log.Println("File sent to scan successfully: ", id)
 
@@ -93,18 +74,26 @@ func scanFileHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println("Error retrieving report: ", err)
 		http.Error(w, "Error retrieving report", http.StatusInternalServerError)
-		return 
+		return
 	}
 	log.Println("Report retrieved successfully")
 
-	log.Println(report)
+	err = db.InsertReport(dbCon, report)
+	if err != nil {
+		log.Println("Error inserting report into database: ", err)
+		http.Error(w, "Error inserting report into database", http.StatusInternalServerError)
+		return
+	}
+	log.Println("Report inserted into database successfully")
+
+	log.Printf("%v, %T\n", report, report)
 	// var parsedReport Report
 	// parsedReport.Name = header.Filename
 	// err = json.Unmarshal(report, &parsedReport)
 	// if err != nil {
 	// 	log.Println("Error parsing report: ", err)
 	// 	http.Error(w, "Error parsing report", http.StatusInternalServerError)
-	// 	return 
+	// 	return
 	// }
 	// log.Println("Report parsed successfully")
 }

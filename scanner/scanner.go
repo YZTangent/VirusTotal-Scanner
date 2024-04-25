@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	rep "website/report"
 )
 
 func SendFileToScan(file multipart.File, header *multipart.FileHeader, apiKey string) (string, error) {
@@ -61,37 +62,42 @@ func SendFileToScan(file multipart.File, header *multipart.FileHeader, apiKey st
 	return id, nil
 }
 
-func GetReport(id, apiKey string) (interface{}, error) {
+func GetReport(id, apiKey string) (rep.ReportJson, error) {
+	report := rep.ReportJson{}
+
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", fmt.Sprintf("https://www.virustotal.com/api/v3/analyses/%s", id), nil)
 	if err != nil {
-		return nil, err
+		return report, err
 	}
 
 	req.Header.Set("x-apikey", apiKey)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return report, err
 	}
 	defer resp.Body.Close()
 	// Check response status code
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
+		return report, fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
 	}
 
-	response, err := parseResponse(resp)
+	responseBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return report, err
+	}
+
+	// Parse JSON response
+	var response rep.ReportJson
+	err = json.Unmarshal(responseBody, &response)
+	if err != nil {
+		return report, err
 	}
 
 	// Extract the id field
-	data, ok := response["data"]
-	if !ok {
-		return nil, fmt.Errorf("unable to extract id from response")
-	}
-
-	return data, nil 
+	data := response
+	return data, nil
 }
 
 func parseResponse(resp *http.Response) (map[string]interface{}, error) {
