@@ -43,8 +43,9 @@ type ReportJson struct {
 }
 
 type ReportNames struct {
-	Name string
-	Id   string
+	Name    string
+	Id      string
+	IdTrunc string
 }
 
 type Report struct {

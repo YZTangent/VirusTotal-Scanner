@@ -69,14 +69,41 @@
 <body>
     <div class="container">
         <h1>Malware Scanner</h1>
-        <form hx-post="/submit" enctype="multipart/form-data">
+        
+        <div style="opacity: 0;">
+            just for padding lol
+            <div class="spinner-grow" role="status"></div>
+            yeah you can tell i cant really frontend
+        </div> 
+
+        <form hx-post="/submit" enctype="multipart/form-data" hx-target="#report-list" hx-swap="beforeend" hx-indicator="#spinner">
             <div class="form-group row mb-3">
                 <label for="formFile" class="form-label">Upload a file to scan:</label>
                 <div class="col-9"><input class="form-control" name="file" type="file" id="formFile"></div>
-                <div class="col-3"><input type="submit" value="Upload"></div>
+                <!-- <div class="col-3"><input type="submit" value="Upload"></div> -->
+                <div class="col-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        Upload
+                    </button>
+                </div>
             </div>
         </form>
         
+        <div class="htmx-indicator" style="text-align: center; vertical-align: text-top;" id="spinner" role="status" aria-hidden="true">
+            <div class="spinner-grow" role="status"></div>
+            <div class="spinner-grow" role="status"></div>
+            <div class="spinner-grow" role="status"></div>
+            Uploading...
+            <div class="spinner-grow" role="status"></div>
+            <div class="spinner-grow" role="status"></div>
+            <div class="spinner-grow" role="status"></div>
+        </div>
+        
+        <!-- <div class="form-floating mb-3">
+            <input type="text" class="form-control" list="datalistOptions" id="report-search" placeholder="name@example.com">
+            <label for="report-search">File Search</label>
+        </div> -->
+
         <table>
             <thead>
                 <tr>
@@ -84,12 +111,14 @@
                     <th>Report</th>
                 </tr>
             </thead>
-            <tbody>
-                {{ range .Analysis }}
+            <tbody id="report-list">
+                {{ range .reports }}
+                {{ block "report-list-entry" . }}
                 <tr>
                     <td>{{ .Name}} </td>
-                    <td>{{ .Name}} Report</td>
+                    <td><a href="/report?id={{ .Id }}">View Report</a></td>
                 </tr>
+                {{ end }}
                 {{ end }}
             </tbody>
         </table>

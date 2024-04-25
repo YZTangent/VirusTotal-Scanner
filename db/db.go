@@ -65,6 +65,7 @@ func GetReports(dbCon *sql.DB) ([]rep.ReportNames, error) {
 		if err != nil {
 			return nil, err
 		}
+		report.IdTrunc = report.Id[:6]
 		reports = append(reports, report)
 	}
 

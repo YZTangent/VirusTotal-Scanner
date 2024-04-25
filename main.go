@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"website/db"
+	rep "website/report"
 	"website/scanner"
 
 	_ "github.com/lib/pq"
@@ -38,7 +39,7 @@ func loadPageHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error retrieving reports", http.StatusInternalServerError)
 	}
 
-	tmpl.Execute(w, reports)
+	tmpl.Execute(w, map[string][]rep.ReportNames{"reports": reports})
 }
 
 func scanFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -78,6 +79,8 @@ func scanFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("Report retrieved successfully")
 
+	report.Name = header.Filename
+
 	err = db.InsertReport(dbCon, report)
 	if err != nil {
 		log.Println("Error inserting report into database: ", err)
@@ -86,16 +89,25 @@ func scanFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("Report inserted into database successfully")
 
-	log.Printf("%v, %T\n", report, report)
-	// var parsedReport Report
-	// parsedReport.Name = header.Filename
-	// err = json.Unmarshal(report, &parsedReport)
-	// if err != nil {
-	// 	log.Println("Error parsing report: ", err)
-	// 	http.Error(w, "Error parsing report", http.StatusInternalServerError)
-	// 	return
-	// }
-	// log.Println("Report parsed successfully")
+	tmpl.ExecuteTemplate(w, "report-list-entry", rep.ReportNames{Name: report.Name, Id: report.Data.Id, IdTrunc: report.Data.Id[:6]})
+}
+
+func loadReportHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+
+	log.Println("Loading report with id: ", id)
+
+	report, err := db.GetReportById(dbCon, id)
+	if err != nil {
+		log.Println("Error retrieving report: ", err)
+		http.Error(w, "Error retrieving report", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Report retrieved successfully")
+
+	rep_tmpl := template.Must(template.ParseFiles("report.html"))
+	rep_tmpl.Execute(w, report)
 }
 
 func main() {
@@ -105,6 +117,8 @@ func main() {
 	http.HandleFunc("/", loadPageHandler)
 
 	http.HandleFunc("/submit", scanFileHandler)
+
+	http.HandleFunc("/report", loadReportHandler)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
